@@ -1,0 +1,1 @@
+self.addEventListener('message', event => { const d=event.data||{}; if(d.type==='notify'){ event.waitUntil(self.registration.showNotification(d.title||'يومي',{body:d.body||'',tag:d.tag||'yawmiyati',data:d.data||{},icon:'./icon-192.png',badge:'./icon-192.png'})); }});

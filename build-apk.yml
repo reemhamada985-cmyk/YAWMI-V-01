@@ -1,0 +1,77 @@
+name: Build YAWMY APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Download and validate complete offline content
+        shell: bash
+        run: bash scripts/prepare_offline_assets.sh
+
+      - name: Verify offline bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s app/src/main/res/raw/adhan.ogg
+          test -s app/src/main/assets/index.html
+          grep -q "const CONTENT_CDN='./data';" app/src/main/assets/index.html
+          grep -q "const MUSHAF_PAGE_IMAGE='./quran-pages/';" app/src/main/assets/index.html
+          grep -q "const ACHIEVEMENTS=" app/src/main/assets/index.html
+          grep -q "0 / 66" app/src/main/assets/index.html
+          grep -q "function createKhatmaPlan" app/src/main/assets/index.html
+          if grep -q '🔖' app/src/main/assets/index.html; then echo 'ERROR: old bookmark emoji remains'; exit 1; fi
+          test -s app/src/main/assets/data/hadith/bukhari.json
+          test -s app/src/main/assets/data/hadith/muslim.json
+          test -s app/src/main/assets/data/tafseer/muyassar.json
+          test -s app/src/main/assets/data/names_of_allah/names_of_allah.json
+          test -s app/src/main/assets/data/forties/nawawi40.json
+          test -s app/src/main/assets/data/prophet_stories/index.json
+          test "$(find app/src/main/assets/quran-pages -maxdepth 1 -type f -name '*.svg' | wc -l)" -eq 604
+          test "$(find app/src/main/assets/data/quran/chapters/ar -maxdepth 1 -type f -name '*.json' | wc -l)" -eq 114
+          for f in app/src/main/assets/data/azkar/*.json; do test -s "$f"; done
+          echo '--- Offline bundle sizes ---'
+          du -sh app/src/main/assets/quran-pages app/src/main/assets/data app/src/main/assets/adhan app/src/main/assets/audio app/src/main/res/raw/adhan.ogg
+          python3 scripts/validate_offline_assets.py
+
+          echo '--- Total packaged source assets before Gradle compression ---'
+          du -sh app/src/main/assets
+          TOTAL_BYTES=$(du -sb app/src/main/assets | cut -f1)
+          echo "Offline assets bytes: $TOTAL_BYTES"
+          if [ "$TOTAL_BYTES" -lt $((15*1024*1024)) ]; then echo 'WARNING: offline bundle smaller than 15 MiB; inspect resource download step.'; fi
+
+      - name: Build debug APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon --stacktrace :app:assembleDebug
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          stat -c 'APK size: %s bytes (%s MiB)' app/build/outputs/apk/debug/app-debug.apk
+          APK_BYTES=$(stat -c '%s' app/build/outputs/apk/debug/app-debug.apk)
+          if [ "$APK_BYTES" -lt $((15*1024*1024)); then echo 'WARNING: APK smaller than 15 MiB; confirm offline resources were packaged.'; fi
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: YAWMY-debug-apk-v1.1.0
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

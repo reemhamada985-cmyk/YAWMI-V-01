@@ -1,0 +1,19 @@
+YAWMY / يومي — Third-party content attribution
+
+QURAN MUSHAF PAGES
+Source: quran-ws/quran-svg — Hafs / KFGQPC Madinah Mushaf, 604 pages.
+Repository: https://github.com/quran-ws/quran-svg
+The repository documents the metadata/polygon layer as CC BY 4.0, tools as MIT, and the Mushaf artwork under the source publisher's terms. This project bundles only the published Hafs/KFGQPC page artwork needed by the app.
+
+HADITH / AZKAR DATA
+Source: mohammed-2-5/islamic-library-data
+Repository: https://github.com/mohammed-2-5/islamic-library-data
+The GitHub repository provides the Bukhari, Muslim, Azkar and other datasets used by the offline build script. Review the repository's current license/attribution information before public redistribution.
+
+ADHAN AUDIO
+File: Beautiful_adhan.ogg
+Author: Adam-synagda
+Source: Wikimedia Commons — File:Beautiful adhan.ogg
+License: CC0 1.0 Universal Public Domain Dedication.
+
+The GitHub Actions build script downloads these sources at build time and places the required files inside the APK assets/resources. The running app does not need an internet connection to read these bundled content files.
